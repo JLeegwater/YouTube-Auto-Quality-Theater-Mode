@@ -1,0 +1,26 @@
+{
+	"manifest_version": 3,
+	"name": "YouTube Auto Quality & Theater Mode",
+	"version": "1.0",
+	"description": "Automatically set YouTube video quality to the highest option and enable theater mode.",
+	"permissions": [
+		"tabs",
+		"scripting"
+	],
+	"host_permissions": [
+		"https://www.youtube.com/*"
+	],
+	"content_scripts": [
+		{
+			"matches": [
+				"https://www.youtube.com/watch?*v=*"
+			],
+			"js": [
+				"content.js"
+			]
+		}
+	],
+	"icons": {
+		"48": "icon.png"
+	}
+}
