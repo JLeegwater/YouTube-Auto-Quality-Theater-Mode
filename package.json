@@ -1,0 +1,27 @@
+{
+  "name": "youtubeextension",
+  "version": "1.0.0",
+  "description": "This JavaScript script is designed to be used in a Chrome extension and performs a series of clicks on specific elements within a YouTube video page. The script is divided into several helper functions that handle different aspects of the clicking process, such as locating and clicking elements with specific attributes or waiting for elements to load. The main functions are executed sequentially within the `runExtension()` function, which is triggered by the `yt-navigate-finish` event.",
+  "main": "content.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JLeegwater/YouTube-Auto-Quality-Theater-Mode.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JLeegwater/YouTube-Auto-Quality-Theater-Mode/issues"
+  },
+  "homepage": "https://github.com/JLeegwater/YouTube-Auto-Quality-Theater-Mode#readme",
+  "devDependencies": {
+    "eslint": "^8.39.0",
+    "eslint-config-standard": "^17.0.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-n": "^15.7.0",
+    "eslint-plugin-promise": "^6.1.1"
+  }
+}

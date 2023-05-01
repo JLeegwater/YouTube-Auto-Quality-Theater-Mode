@@ -1,53 +1,7 @@
 const tag = document.createElement("script");
 document.head.appendChild(tag);
 
-async function waitForElement(selector, timeout = 30000) {
-	console.log("Waiting for element", selector);
-	const startTime = Date.now();
-
-	while (Date.now() - startTime < timeout) {
-		const element = document.querySelector(selector);
-		if (element) return element;
-		await new Promise((resolve) => setTimeout(resolve, 500));
-	}
-
-	return null;
-}
-
-async function clickSizeButton() {
-	const sizeButton = await waitForElement(".ytp-size-button");
-	if (sizeButton) {
-		console.log("Theater mode button found");
-		const theaterModeTitle = "Theater mode";
-		if (sizeButton.getAttribute("data-title-no-tooltip") === theaterModeTitle) {
-			console.log("Theater mode not active");
-			sizeButton.dispatchEvent(
-				new MouseEvent("click", { bubbles: true, cancelable: true })
-			);
-			console.log("Theater mode button clicked");
-		} else {
-			console.log("Theater  mode already active");
-		}
-	} else {
-		console.log("Theater mode button not found");
-	}
-}
-
-async function getPlayer() {
-	const player = new YT.Player("movie_player");
-
-	return new Promise((resolve, reject) => {
-		player.addEventListener("onReady", () => {
-			resolve(player);
-		});
-
-		setTimeout(() => {
-			reject(null);
-		}, 5000);
-	});
-}
-
-// // Function to check if player is fully loaded
+// Function to check if player is fully loaded
 function isPlayerLoaded(player) {
 	const videoQualityButton = player.querySelector(".ytp-settings-button");
 	const sizeButton = player.querySelector(".ytp-size-button");
@@ -55,33 +9,45 @@ function isPlayerLoaded(player) {
 	return videoQualityButton && sizeButton;
 }
 
+function handlePlayerLoad(player, timeout, observer, resolve) {
+	const loaded = isPlayerLoaded(player);
+	if (loaded) {
+		clearTimeout(timeout);
+		observer.disconnect();
+		resolve(player);
+	} else {
+		observer.observe(document.body, {
+			childList: true,
+			subtree: true,
+			attributes: false,
+			characterData: false,
+		});
+	}
+}
+
 // Function to wait for the player to be fully loaded
-function waitForPlayerLoad() {
-	console.log("Waiting for player to be fully loaded");
-	return new Promise((resolve) => {
+const waitForPlayerLoad = () => {
+	return new Promise((resolve, reject) => {
+		const timeout = setTimeout(() => {
+			observer.disconnect();
+			reject(new Error("Timed out waiting for player to load"));
+		}, 10000); // 10 seconds
+
 		const observer = new MutationObserver((mutations) => {
 			mutations.forEach((mutation) => {
 				const player = mutation.target;
-				if (isPlayerLoaded(player)) {
-					observer.disconnect();
-					resolve(player);
-				}
+				handlePlayerLoad(player, timeout, observer, resolve);
 			});
 		});
 
 		const player = document.querySelector("#movie_player");
-		if (player && isPlayerLoaded(player)) {
-			resolve(player);
-		} else {
-			observer.observe(document.body, {
-				childList: true,
-				subtree: true,
-				attributes: false,
-				characterData: false,
-			});
+		if (!player) {
+			return reject(new Error("Player not found"));
 		}
+
+		handlePlayerLoad(player, timeout, observer, resolve);
 	});
-}
+};
 
 function waitForElement(selector, timeout = 5000) {
 	return new Promise((resolve, reject) => {
@@ -107,26 +73,58 @@ function waitForElement(selector, timeout = 5000) {
 	});
 }
 
-async function clickElementByAttribute(attribute, value) {
+async function clickElementByAttribute(
+	{ attribute, value, altValue },
+	timeout = 5000
+) {
 	try {
 		const selector = `[${attribute}="${value}"]`;
-		const element = await waitForElement(selector, 2000); // Adjust the timeout if needed
+
+		const element = await waitForElement(selector, timeout);
+
+		if (!element) {
+			throw new Error(`No elements found with attribute ${attribute}`);
+		}
+
+		// Check if the altValue is provided and matches the element's attribute
+		if (
+			altValue &&
+			element.getAttribute(altValue.attribute).includes(altValue.value)
+		) {
+			console.log(
+				`Element with attribute ${attribute}: "${value}" has altValue "${altValue}", skipping...`
+			);
+			return;
+		}
 
 		if (element) {
 			element.click();
-			return true;
-		} else {
-			console.log(`Element with ${attribute} "${value}" not found.`);
-			return false;
+			console.log(`Clicked element with attribute ${attribute}: "${value}"`);
 		}
 	} catch (error) {
-		console.log(
-			`Element with ${attribute} "${value}" not found within timeout.`
-		);
-		return false;
+		console.error(error.message);
 	}
 }
 
+// async function clickElementByAttribute(attribute, value) {
+// 	try {
+// 		const selector = `[${attribute}="${value}"]`;
+// 		const element = await waitForElement(selector, 2000); // Adjust the timeout if needed
+
+// 		if (element) {
+// 			element.click();
+// 			return true;
+// 		} else {
+// 			console.log(`Element with ${attribute} "${value}" not found.`);
+// 			return false;
+// 		}
+// 	} catch (error) {
+// 		console.log(
+// 			`Element with ${attribute} "${value}" not found within timeout.`
+// 		);
+// 		return false;
+// 	}
+// }
 function clickQualityMenuItem() {
 	return new Promise((resolve, reject) => {
 		const menuItems = document.querySelectorAll(
@@ -164,20 +162,26 @@ function clickFirstQualityOption() {
 
 async function clickElementsSequentially() {
 	const actions = [
-		{ type: "attribute", attribute: "aria-label", value: "Settings" },
+		{
+			type: "attribute",
+			attribute: "aria-label",
+			value: "Settings",
+		},
 		{ type: "qualityMenuItem" },
 		{ type: "firstQualityOption" },
-		{ type: "attribute", attribute: "title", value: "Theater mode (t)" },
+		{
+			type: "attribute",
+			attribute: "class",
+			value: "ytp-size-button ytp-button",
+			altValue: { attribute: "Title", value: "Default view (t)" },
+		},
 		// Add other actions as needed
 	];
 
 	for (const action of actions) {
 		try {
 			if (action.type === "attribute") {
-				await clickElementByAttribute(action.attribute, action.value);
-				console.log(
-					`Clicked element with ${action.attribute}: ${action.value}`
-				);
+				await clickElementByAttribute(action);
 			} else if (action.type === "qualityMenuItem") {
 				await clickQualityMenuItem();
 				console.log("Clicked Quality menu item.");
@@ -196,12 +200,9 @@ async function clickElementsSequentially() {
 }
 
 async function runExtension() {
-	console.log("Running extension!");
+	console.log("Running extension!!");
 	waitForPlayerLoad().then(() => {
 		console.log("Player is fully loaded");
-
-		console.log("Clicked element with title: Theater mode (t)");
-
 		clickElementsSequentially();
 	});
 }
