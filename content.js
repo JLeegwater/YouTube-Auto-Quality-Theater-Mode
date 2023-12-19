@@ -133,13 +133,43 @@ function clickFirstQualityOption() {
 		);
 
 		if (firstOption) {
-			firstOption.click();
-			resolve(true);
+			// Check if the firstOption contains a div with the classname of ytp-premium-label
+			const premiumLabel = firstOption.querySelector(
+				"div > div > span > .ytp-premium-label"
+			);
+			if (premiumLabel) {
+				// If it does contain this item, go to the next child element
+				const nextOption = firstOption.nextElementSibling;
+				if (nextOption) {
+					nextOption.click();
+					resolve(true);
+				} else {
+					reject(new Error("Next quality option not found."));
+				}
+			} else {
+				firstOption.click();
+				resolve(true);
+			}
 		} else {
 			reject(new Error("First quality option not found."));
 		}
 	});
 }
+
+// function clickFirstQualityOption() {
+// 	return new Promise((resolve, reject) => {
+// 		const firstOption = document.querySelector(
+// 			".ytp-quality-menu .ytp-panel-menu > :first-child"
+// 		);
+
+// 		if (firstOption) {
+// 			firstOption.click();
+// 			resolve(true);
+// 		} else {
+// 			reject(new Error("First quality option not found."));
+// 		}
+// 	});
+// }
 
 async function clickElementsSequentially() {
 	const actions = [
@@ -181,7 +211,7 @@ async function clickElementsSequentially() {
 }
 
 async function runExtension() {
-	console.log("Running extension!!");
+	console.log("Running extension!! TESTING2");
 	waitForPlayerLoad().then(() => {
 		console.log("Player is fully loaded");
 		clickElementsSequentially();
