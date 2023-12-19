@@ -45,29 +45,6 @@ const waitForPlayerLoad = () => {
 	});
 };
 
-// const waitForPlayerLoad = () => {
-// 	return new Promise((resolve, reject) => {
-// 		const timeout = setTimeout(() => {
-// 			observer.disconnect();
-// 			reject(new Error("Timed out waiting for player to load"));
-// 		}, 10000); // 10 seconds
-
-// 		const observer = new MutationObserver((mutations) => {
-// 			mutations.forEach((mutation) => {
-// 				const player = mutation.target;
-// 				handlePlayerLoad(player, timeout, observer, resolve);
-// 			});
-// 		});
-
-// 		const player = document.querySelector("#movie_player");
-// 		if (!player) {
-// 			return reject(new Error("Player not found"));
-// 		}
-
-// 		handlePlayerLoad(player, timeout, observer, resolve);
-// 	});
-// };
-
 function waitForElement(selector, timeout = 5000) {
 	return new Promise((resolve, reject) => {
 		const startTime = Date.now();
@@ -111,7 +88,7 @@ async function clickElementByAttribute(
 			element.getAttribute(altValue.attribute).includes(altValue.value) // work on later
 		) {
 			console.log(
-				`Element with attribute ${attribute}: "${value}" has altValue "${altValue}", skipping...`
+				`Element with attribute ${attribute}: "${value}" has altValue "${altValue.value}", skipping...`
 			);
 			return;
 		}
