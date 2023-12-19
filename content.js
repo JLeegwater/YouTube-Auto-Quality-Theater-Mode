@@ -28,26 +28,45 @@ function handlePlayerLoad(player, timeout, observer, resolve) {
 // Function to wait for the player to be fully loaded
 const waitForPlayerLoad = () => {
 	return new Promise((resolve, reject) => {
-		const timeout = setTimeout(() => {
-			observer.disconnect();
+		let intervalId;
+		const timeoutId = setTimeout(() => {
+			clearInterval(intervalId);
 			reject(new Error("Timed out waiting for player to load"));
-		}, 10000); // 10 seconds
+		}, 5000); // 5 seconds
 
-		const observer = new MutationObserver((mutations) => {
-			mutations.forEach((mutation) => {
-				const player = mutation.target;
-				handlePlayerLoad(player, timeout, observer, resolve);
-			});
-		});
-
-		const player = document.querySelector("#movie_player");
-		if (!player) {
-			return reject(new Error("Player not found"));
-		}
-
-		handlePlayerLoad(player, timeout, observer, resolve);
+		intervalId = setInterval(() => {
+			const player = document.querySelector("#movie_player");
+			if (player) {
+				clearTimeout(timeoutId);
+				clearInterval(intervalId);
+				resolve(player);
+			}
+		}, 100); // check every 100ms
 	});
 };
+
+// const waitForPlayerLoad = () => {
+// 	return new Promise((resolve, reject) => {
+// 		const timeout = setTimeout(() => {
+// 			observer.disconnect();
+// 			reject(new Error("Timed out waiting for player to load"));
+// 		}, 10000); // 10 seconds
+
+// 		const observer = new MutationObserver((mutations) => {
+// 			mutations.forEach((mutation) => {
+// 				const player = mutation.target;
+// 				handlePlayerLoad(player, timeout, observer, resolve);
+// 			});
+// 		});
+
+// 		const player = document.querySelector("#movie_player");
+// 		if (!player) {
+// 			return reject(new Error("Player not found"));
+// 		}
+
+// 		handlePlayerLoad(player, timeout, observer, resolve);
+// 	});
+// };
 
 function waitForElement(selector, timeout = 5000) {
 	return new Promise((resolve, reject) => {
@@ -211,7 +230,7 @@ async function clickElementsSequentially() {
 }
 
 async function runExtension() {
-	console.log("Running extension!! TESTING2");
+	console.log("Running extension!!");
 	waitForPlayerLoad().then(() => {
 		console.log("Player is fully loaded");
 		clickElementsSequentially();
