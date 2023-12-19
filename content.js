@@ -89,7 +89,7 @@ async function clickElementByAttribute(
 		// Check if the altValue is provided and matches the element's attribute
 		if (
 			altValue &&
-			element.getAttribute(altValue.attribute).includes(altValue.value)
+			element.getAttribute(altValue.attribute).includes(altValue.value) // work on later
 		) {
 			console.log(
 				`Element with attribute ${attribute}: "${value}" has altValue "${altValue}", skipping...`
@@ -106,25 +106,6 @@ async function clickElementByAttribute(
 	}
 }
 
-// async function clickElementByAttribute(attribute, value) {
-// 	try {
-// 		const selector = `[${attribute}="${value}"]`;
-// 		const element = await waitForElement(selector, 2000); // Adjust the timeout if needed
-
-// 		if (element) {
-// 			element.click();
-// 			return true;
-// 		} else {
-// 			console.log(`Element with ${attribute} "${value}" not found.`);
-// 			return false;
-// 		}
-// 	} catch (error) {
-// 		console.log(
-// 			`Element with ${attribute} "${value}" not found within timeout.`
-// 		);
-// 		return false;
-// 	}
-// }
 function clickQualityMenuItem() {
 	return new Promise((resolve, reject) => {
 		const menuItems = document.querySelectorAll(
