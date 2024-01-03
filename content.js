@@ -152,21 +152,6 @@ function clickFirstQualityOption() {
 	});
 }
 
-// function clickFirstQualityOption() {
-// 	return new Promise((resolve, reject) => {
-// 		const firstOption = document.querySelector(
-// 			".ytp-quality-menu .ytp-panel-menu > :first-child"
-// 		);
-
-// 		if (firstOption) {
-// 			firstOption.click();
-// 			resolve(true);
-// 		} else {
-// 			reject(new Error("First quality option not found."));
-// 		}
-// 	});
-// }
-
 async function clickElementsSequentially() {
 	const actions = [
 		{
@@ -210,6 +195,7 @@ async function runExtension() {
 	console.log("Running extension!!");
 	waitForPlayerLoad().then(() => {
 		console.log("Player is fully loaded");
+
 		clickElementsSequentially();
 	});
 }
