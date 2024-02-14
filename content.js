@@ -26,40 +26,56 @@ function handlePlayerLoad(player, timeout, observer, resolve) {
 }
 
 // Function to wait for the player to be fully loaded
+//create a function separate out the wait part of these two functions to avoid repetition
+function waitFor(timeout) {
+	return new Promise((resolve, reject) => {
+		const startTime = Date.now();
+
+		const checkTimeout = () => {
+			if (Date.now() - startTime > timeout) {
+				reject(new Error(`Timed out after ${timeout}ms`));
+			} else {
+				setTimeout(checkTimeout, 100);
+			}
+		};
+
+		checkTimeout();
+	});
+}
+
 const waitForPlayerLoad = () => {
 	return new Promise((resolve, reject) => {
 		let intervalId;
-		const timeoutId = setTimeout(() => {
+
+		const timeoutId = waitFor(5000).catch(() => {
 			clearInterval(intervalId);
 			reject(new Error("Timed out waiting for player to load"));
-		}, 5000); // 5 seconds
+		});
 
 		intervalId = setInterval(() => {
 			const player = document.querySelector("#movie_player");
 			if (player) {
-				clearTimeout(timeoutId);
 				clearInterval(intervalId);
 				resolve(player);
 			}
-		}, 100); // check every 100ms
+		}, 100);
 	});
 };
 
 function waitForElement(selector, timeout = 5000) {
 	return new Promise((resolve, reject) => {
-		const startTime = Date.now();
+		waitFor(timeout).catch(() => {
+			reject(
+				new Error(
+					`Element with selector "${selector}" not found within ${timeout}ms`
+				)
+			);
+		});
 
 		const checkElementExistence = () => {
 			const element = document.querySelector(selector);
-
 			if (element) {
 				resolve(element);
-			} else if (Date.now() - startTime > timeout) {
-				reject(
-					new Error(
-						`Element with selector "${selector}" not found within ${timeout} ms.`
-					)
-				);
 			} else {
 				setTimeout(checkElementExistence, 100);
 			}
