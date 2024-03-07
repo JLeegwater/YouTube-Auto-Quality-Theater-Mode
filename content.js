@@ -86,7 +86,7 @@ function waitForElement(selector, timeout = 5000) {
 }
 
 async function clickElementByAttribute(
-	{ attribute, value, altValue },
+	{ attribute, value, altValue, optional = false },
 	timeout = 5000
 ) {
 	try {
@@ -114,7 +114,11 @@ async function clickElementByAttribute(
 			console.log(`Clicked element with attribute ${attribute}: "${value}"`);
 		}
 	} catch (error) {
-		console.error(error.message);
+		if (optional) {
+			console.log(error.message);
+		} else {
+			console.error(error.message);
+		}
 	}
 }
 
@@ -183,6 +187,13 @@ async function clickElementsSequentially() {
 			value: "ytp-size-button ytp-button",
 			altValue: { attribute: "Title", value: "Default view (t)" },
 		},
+		{
+			type: "attribute",
+			attribute: "id",
+			value: "dismiss-button",
+			optional: true,
+		},
+
 		// Add other actions as needed
 	];
 
