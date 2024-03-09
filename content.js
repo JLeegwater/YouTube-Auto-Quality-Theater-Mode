@@ -1,145 +1,87 @@
 const tag = document.createElement("script");
 document.head.appendChild(tag);
 
-// Function to check if player is fully loaded
-function isPlayerLoaded(player) {
-	const videoQualityButton = player.querySelector(".ytp-settings-button");
-	const sizeButton = player.querySelector(".ytp-size-button");
-
-	return videoQualityButton && sizeButton;
+function createObserver(callback) {
+	return new MutationObserver((mutations) => {
+		callback(mutations);
+	});
 }
 
-function handlePlayerLoad(player, timeout, observer, resolve) {
-	const loaded = isPlayerLoaded(player);
-	if (loaded) {
-		clearTimeout(timeout);
-		observer.disconnect();
-		resolve(player);
-	} else {
-		observer.observe(document.body, {
+function isPlayerFullyLoaded(player) {
+	return (
+		!!player &&
+		!!player.querySelector(".ytp-settings-button") &&
+		!!player.querySelector(".ytp-size-button")
+	);
+}
+
+function waitForElement(selector, predicate = () => true) {
+	return new Promise((resolve, reject) => {
+		const observer = createObserver((mutations) => {
+			const elements = document.querySelectorAll(selector);
+			elements.forEach((element) => {
+				console.log("Found element:", element);
+				if (predicate(element)) {
+					observer.disconnect();
+					resolve(element);
+				}
+			});
+		});
+
+		observer.observe(document.documentElement, {
 			childList: true,
 			subtree: true,
-			attributes: false,
-			characterData: false,
 		});
-	}
-}
-
-// Function to wait for the player to be fully loaded
-//create a function separate out the wait part of these two functions to avoid repetition
-function waitFor(timeout) {
-	return new Promise((resolve, reject) => {
-		const startTime = Date.now();
-
-		const checkTimeout = () => {
-			if (Date.now() - startTime > timeout) {
-				reject(new Error(`Timed out after ${timeout}ms`));
-			} else {
-				setTimeout(checkTimeout, 100);
-			}
-		};
-
-		checkTimeout();
 	});
 }
 
-const waitForPlayerLoad = () => {
-	return new Promise((resolve, reject) => {
-		let intervalId;
+async function clickElementByAttribute({
+	attribute,
+	value,
+	altValue,
+	optional = false,
+	predicate,
+}) {
+	const selector = `[${attribute}="${value}"]`;
+	const element = await waitForElement(selector, predicate);
 
-		const timeoutId = waitFor(5000).catch(() => {
-			clearInterval(intervalId);
-			reject(new Error("Timed out waiting for player to load"));
-		});
-
-		intervalId = setInterval(() => {
-			const player = document.querySelector("#movie_player");
-			if (player) {
-				clearInterval(intervalId);
-				resolve(player);
-			}
-		}, 100);
-	});
-};
-
-function waitForElement(selector, timeout = 5000) {
-	return new Promise((resolve, reject) => {
-		waitFor(timeout).catch(() => {
-			reject(
-				new Error(
-					`Element with selector "${selector}" not found within ${timeout}ms`
-				)
-			);
-		});
-
-		const checkElementExistence = () => {
-			const element = document.querySelector(selector);
-			if (element) {
-				resolve(element);
-			} else {
-				setTimeout(checkElementExistence, 100);
-			}
-		};
-
-		checkElementExistence();
-	});
-}
-
-async function clickElementByAttribute(
-	{ attribute, value, altValue, optional = false },
-	timeout = 5000
-) {
-	try {
-		const selector = `[${attribute}="${value}"]`;
-
-		const element = await waitForElement(selector, timeout);
-
-		if (!element) {
-			throw new Error(`No elements found with attribute ${attribute}`);
-		}
-
-		// Check if the altValue is provided and matches the element's attribute
-		if (
-			altValue &&
-			element.getAttribute(altValue.attribute).includes(altValue.value) // work on later
-		) {
-			console.log(
-				`Element with attribute ${attribute}: "${value}" has altValue "${altValue.value}", skipping...`
-			);
-			return;
-		}
-
-		if (element) {
-			element.click();
-			console.log(`Clicked element with attribute ${attribute}: "${value}"`);
-		}
-	} catch (error) {
+	if (!element) {
 		if (optional) {
-			console.log(error.message);
+			console.log(`No elements found with attribute ${attribute}`);
 		} else {
-			console.error(error.message);
+			console.error(`No elements found with attribute ${attribute}`);
 		}
+		return;
 	}
+
+	if (
+		altValue &&
+		element.getAttribute(altValue.attribute).includes(altValue.value)
+	) {
+		console.log(
+			`Element with attribute ${attribute}: "${value}" has altValue "${altValue.value}", skipping...`
+		);
+		return;
+	}
+
+	element.click();
+	console.log(`Clicked element with attribute ${attribute}: "${value}"`);
+	console.log(element);
 }
 
 function clickQualityMenuItem() {
-	return new Promise((resolve, reject) => {
-		const menuItems = document.querySelectorAll(
-			".ytp-panel-menu .ytp-menuitem"
-		);
+	const menuItems = document.querySelectorAll(".ytp-panel-menu .ytp-menuitem");
 
-		for (const menuItem of menuItems) {
-			const labelDiv = menuItem.querySelector(".ytp-menuitem-label");
+	for (const menuItem of menuItems) {
+		const label = menuItem.querySelector(".ytp-menuitem-label");
 
-			if (labelDiv && labelDiv.textContent === "Quality") {
-				menuItem.click();
-				resolve(true);
-				return;
-			}
+		if (label && label.textContent === "Quality") {
+			menuItem.click();
+			return Promise.resolve(true);
 		}
+	}
 
-		reject(new Error("Quality menu item not found."));
-	});
+	return Promise.reject(new Error("Quality menu item not found."));
 }
 
 function clickFirstQualityOption() {
@@ -199,14 +141,20 @@ async function clickElementsSequentially() {
 
 	for (const action of actions) {
 		try {
-			if (action.type === "attribute") {
-				await clickElementByAttribute(action);
-			} else if (action.type === "qualityMenuItem") {
-				await clickQualityMenuItem();
-				console.log("Clicked Quality menu item.");
-			} else if (action.type === "firstQualityOption") {
-				await clickFirstQualityOption();
-				console.log("Clicked first quality option.");
+			switch (action.type) {
+				case "attribute":
+					await clickElementByAttribute(action);
+					break;
+				case "qualityMenuItem":
+					await clickQualityMenuItem();
+					console.log("Clicked Quality menu item.");
+					break;
+				case "firstQualityOption":
+					await clickFirstQualityOption();
+					console.log("Clicked first quality option.");
+					break;
+				default:
+					console.log(`Unknown action type: ${action.type}`);
 			}
 
 			// Adjust the timeout duration as needed
@@ -220,11 +168,12 @@ async function clickElementsSequentially() {
 
 async function runExtension() {
 	console.log("Running extension!!");
-	waitForPlayerLoad().then(() => {
-		console.log("Player is fully loaded");
-
-		clickElementsSequentially();
-	});
+	waitForElement("#movie_player", (player) => isPlayerFullyLoaded(player)).then(
+		(player) => {
+			console.log("Player is fully loaded");
+			clickElementsSequentially();
+		}
+	);
 }
 
 window.addEventListener("yt-navigate-finish", runExtension);
