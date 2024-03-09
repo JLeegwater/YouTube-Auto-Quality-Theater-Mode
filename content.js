@@ -15,23 +15,27 @@ function isPlayerFullyLoaded(player) {
 	);
 }
 
-function waitForElement(selector, predicate = () => true) {
+function waitForElement(selector, predicate = () => true, timeout = 5000) {
 	return new Promise((resolve, reject) => {
 		const observer = createObserver((mutations) => {
 			const elements = document.querySelectorAll(selector);
-			elements.forEach((element) => {
-				console.log("Found element:", element);
-				if (predicate(element)) {
-					observer.disconnect();
-					resolve(element);
-				}
-			});
+			const element = Array.from(elements).find(predicate);
+
+			if (element) {
+				observer.disconnect();
+				resolve(element);
+			}
 		});
 
 		observer.observe(document.documentElement, {
 			childList: true,
 			subtree: true,
 		});
+
+		setTimeout(() => {
+			observer.disconnect();
+			reject(new Error(`Timed out waiting for element matching "${selector}"`));
+		}, timeout);
 	});
 }
 
@@ -42,6 +46,7 @@ async function clickElementByAttribute({
 	optional = false,
 	predicate,
 }) {
+	console.log(`Looking for ${attribute}="${value}"...`);
 	const selector = `[${attribute}="${value}"]`;
 	const element = await waitForElement(selector, predicate);
 
@@ -69,96 +74,53 @@ async function clickElementByAttribute({
 	console.log(element);
 }
 
-function clickQualityMenuItem() {
-	const menuItems = document.querySelectorAll(".ytp-panel-menu .ytp-menuitem");
-
-	for (const menuItem of menuItems) {
-		const label = menuItem.querySelector(".ytp-menuitem-label");
-
-		if (label && label.textContent === "Quality") {
-			menuItem.click();
-			return Promise.resolve(true);
-		}
-	}
-
-	return Promise.reject(new Error("Quality menu item not found."));
-}
-
-function clickFirstQualityOption() {
-	return new Promise((resolve, reject) => {
-		const firstOption = document.querySelector(
-			".ytp-quality-menu .ytp-panel-menu > :first-child"
-		);
-
-		if (firstOption) {
-			// Check if the firstOption contains a div with the classname of ytp-premium-label
-			const premiumLabel = firstOption.querySelector(
-				"div > div > span > .ytp-premium-label"
-			);
-			if (premiumLabel) {
-				// If it does contain this item, go to the next child element
-				const nextOption = firstOption.nextElementSibling;
-				if (nextOption) {
-					nextOption.click();
-					resolve(true);
-				} else {
-					reject(new Error("Next quality option not found."));
-				}
-			} else {
-				firstOption.click();
-				resolve(true);
-			}
-		} else {
-			reject(new Error("First quality option not found."));
-		}
-	});
-}
-
 async function clickElementsSequentially() {
 	const actions = [
 		{
-			type: "attribute",
 			attribute: "aria-label",
 			value: "Settings",
 		},
-		{ type: "qualityMenuItem" },
-		{ type: "firstQualityOption" },
 		{
-			type: "attribute",
+			attribute: "class",
+			value: "ytp-menuitem-label",
+			predicate: (label) => {
+				return label && label.textContent === "Quality";
+			},
+		},
+		{
+			attribute: "class",
+			value: "ytp-menuitem-label",
+			predicate: (element) => {
+				const premiumLabel = element.querySelector(
+					"div > div > span > .ytp-premium-label"
+				);
+
+				console.log(premiumLabel);
+				return !premiumLabel;
+			},
+		},
+
+		{
 			attribute: "class",
 			value: "ytp-size-button ytp-button",
 			altValue: { attribute: "Title", value: "Default view (t)" },
 		},
-		{
-			type: "attribute",
-			attribute: "id",
-			value: "dismiss-button",
-			optional: true,
-		},
+
+		// {
+		// 	attribute: "id",
+		// 	value: "dismiss-button",
+		// 	optional: true,
+		// },
 
 		// Add other actions as needed
 	];
 
 	for (const action of actions) {
 		try {
-			switch (action.type) {
-				case "attribute":
-					await clickElementByAttribute(action);
-					break;
-				case "qualityMenuItem":
-					await clickQualityMenuItem();
-					console.log("Clicked Quality menu item.");
-					break;
-				case "firstQualityOption":
-					await clickFirstQualityOption();
-					console.log("Clicked first quality option.");
-					break;
-				default:
-					console.log(`Unknown action type: ${action.type}`);
-			}
+			await clickElementByAttribute(action);
 
 			// Adjust the timeout duration as needed
-			await new Promise((resolve) => setTimeout(resolve, 1000));
+			await new Promise((resolve) => setTimeout(resolve, 200));
 		} catch (error) {
 			console.error(error.message);
 			break;
@@ -167,13 +129,13 @@ async function clickElementsSequentially() {
 }
 
 async function runExtension() {
-	console.log("Running extension!!");
-	waitForElement("#movie_player", (player) => isPlayerFullyLoaded(player)).then(
-		(player) => {
-			console.log("Player is fully loaded");
-			clickElementsSequentially();
-		}
-	);
+	const player = await waitForElement(
+		"#movie_player",
+		isPlayerFullyLoaded
+	).then(() => {
+		console.log("Player fully loaded");
+		clickElementsSequentially();
+	});
 }
 
 window.addEventListener("yt-navigate-finish", runExtension);
